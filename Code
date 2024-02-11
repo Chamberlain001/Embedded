@@ -1,0 +1,66 @@
+#define BUZZER 21
+#define BUTTON 26
+hw_timer_t *Sound = NULL;
+hw_timer_t *Stage = NULL;
+int Stop = 0;
+int G5 = 2551; 
+int A_5 = 2272;
+int B5 = 2145;
+int D6 = 1702;
+int E6 = 1516;
+int F6 = 1431;
+int Fsharp6 = 1351;
+int G6 = 1275;
+int B6 = 1012;
+int note[60] = {B5, F6, B5, E6, D6, B5, D6, G5, D6, F6, D6, B5, G5, A_5, E6, A_5, E6, Stop, E6, D6,B5, F6, B5, E6, D6, B5, D6, G5, D6, F6, D6, B5, G5, A_5, E6, A_5, E6, G6,Stop,G6,Stop,Fsharp6};
+int tempo[60] = {400000,200000,400000,400000,400000,200000,200000,200000,100000,100000,200000,200000,200000,400000,200000,400000,512000,12000,800000,800000,400000,200000,400000,400000,400000,200000,200000,200000,100000,100000,200000,200000,200000,400000,200000,400000,410000,352500,50000,159000,240000,800000};
+int arrLength = sizeof(note) / sizeof(int);
+int count = 0;
+int tp_ct = 0;
+double speed[5] = {1,0.75,0.5,2,1.5};
+double nowSpeed = 1;
+int idx = 1;
+
+void IRAM_ATTR pulseGen(){
+  digitalWrite(BUZZER, !digitalRead(BUZZER));
+}
+
+void IRAM_ATTR IO_INT_ISR(){
+  nowSpeed = speed[idx];
+  idx = (idx + 1)%5;
+}
+
+int tp(){
+  double t = tempo[tp_ct] * nowSpeed;
+  tp_ct = (tp_ct + 1)%arrLength;
+  return (int) t;
+}
+
+int fz(){
+  int t = note[count];
+  count = (count + 1)%arrLength;
+  return t;
+}
+
+void IRAM_ATTR start(){
+  timerAlarmWrite(Sound, fz(), true);
+  timerAlarmEnable(Sound);
+  timerAlarmWrite(Stage, tp(), true);
+  timerAlarmEnable(Stage);
+}
+
+void setup() {
+  pinMode(BUZZER, OUTPUT);
+  pinMode(BUTTON, INPUT);
+  Sound = timerBegin(0, 80, true);
+  Stage = timerBegin(1, 80, true);
+  timerAttachInterrupt(Sound, &pulseGen, true);
+  timerAttachInterrupt(Stage, &start, true);
+  attachInterrupt(BUTTON, IO_INT_ISR, RISING);
+  start();
+} 
+
+void loop()
+{
+  // Do nothing....
+}
